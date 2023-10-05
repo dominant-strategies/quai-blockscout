@@ -3,7 +3,21 @@
 <% from_address = @transaction.from_address %>
 <% to_address_hash = @transaction.to_address_hash %>
 <% created_address_hash = @transaction.created_contract_address_hash %>
-<% type = if @transaction.type == 2, do: "2 (EIP-1559)", else: @transaction.type %>
+<% 
+type = if @transaction.type == 0 do 
+  "Internal Transaction"
+else 
+  if @transaction.type == 1 do 
+    "External Transaction"
+  else 
+    if @transaction.type == 2 do
+      "Internal to External Transaction"
+    else
+      @transaction.type
+    end
+  end
+end
+%>
 <% base_fee_per_gas = if block, do: block.base_fee_per_gas, else: nil %>
 <% max_priority_fee_per_gas = @transaction.max_priority_fee_per_gas %>
 <% max_fee_per_gas = @transaction.max_fee_per_gas %>
