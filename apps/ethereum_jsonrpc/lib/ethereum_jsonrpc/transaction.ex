@@ -369,12 +369,12 @@ defmodule EthereumJSONRPC.Transaction do
 
   """
   def to_elixir(transaction) when is_map(transaction) do
-    Enum.into(transaction, %{}, &entry_to_elixir/1)
+    _ = Logger.info("Transaction to elixir : #{inspect(transaction)}")
+    Enum.into(transaction, %{}, fn {key, value} -> entry_to_elixir({key, value}, transaction) end)
   end
 
   def to_elixir(transaction) when is_binary(transaction) do
-    #    Logger.warn(["Fetched transaction is not full: ", transaction])
-
+    # Logger.warn(["Fetched transaction is not full: ", transaction])
     nil
   end
 
@@ -392,16 +392,17 @@ defmodule EthereumJSONRPC.Transaction do
     })
   end
 
-  # double check that no new keys are being missed by requiring explicit match for passthrough
-  # `t:EthereumJSONRPC.address/0` and `t:EthereumJSONRPC.hash/0` pass through as `Explorer.Chain` can verify correct
-  # hash format
-  #
-  # "txType": to avoid FunctionClauseError when indexing Wanchain
+  defp entry_to_elixir({"from", _value} = tuple, %{"type" => "0x1", "sender" => sender}) do
+    {"from", sender}
+  end
+  defp entry_to_elixir(tuple, _transaction) do
+    entry_to_elixir(tuple)
+  end
+
   defp entry_to_elixir({key, value})
        when key in ~w(blockHash condition creates from hash input jsonrpc publicKey raw to txType),
        do: {key, value}
 
-  # specific to Nethermind client
   defp entry_to_elixir({"data", value}),
        do: {"input", value}
 
@@ -411,12 +412,10 @@ defmodule EthereumJSONRPC.Transaction do
     {key, quantity_to_integer(quantity)}
   end
 
-  # as always ganache has it's own vision on JSON RPC standard
   defp entry_to_elixir({key, nil}) when key in ~w(r s v) do
     {key, 0}
   end
 
-  # quantity or nil for pending
   defp entry_to_elixir({key, quantity_or_nil}) when key in ~w(blockNumber transactionIndex) do
     elixir =
       case quantity_or_nil do
@@ -427,7 +426,6 @@ defmodule EthereumJSONRPC.Transaction do
     {key, elixir}
   end
 
-  # chainId is *sometimes* nil
   defp entry_to_elixir({"chainId" = key, chain_id}) do
     case chain_id do
       nil -> {key, chain_id}
