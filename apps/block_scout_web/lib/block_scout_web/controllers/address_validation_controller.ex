@@ -28,11 +28,13 @@ defmodule BlockScoutWeb.AddressValidationController do
               miner: :required,
               nephews: :optional,
               transactions: :optional,
-              rewards: :optional
+              rewards: :optional,
+              ext_transactions: :optional,
             }
           ],
           paging_options(params)
         )
+
 
       blocks_plus_one = Chain.get_blocks_validated_by_address(full_options, address_hash)
       {blocks, next_page} = split_list_by_page(blocks_plus_one)
