@@ -2466,11 +2466,9 @@ defmodule Explorer.Chain do
   """
   @spec list_blocks([paging_options | necessity_by_association_option]) :: [Block.t()]
   def list_blocks(options \\ []) when is_list(options) do
-    IO.puts("list_blocks")
     necessity_by_association = Keyword.get(options, :necessity_by_association, %{})
     paging_options = Keyword.get(options, :paging_options) || @default_paging_options
     block_type = Keyword.get(options, :block_type, "Block")
-
     cond do
       block_type == "Block" && !paging_options.key ->
         block_from_cache(block_type, paging_options, necessity_by_association)
@@ -2513,6 +2511,7 @@ defmodule Explorer.Chain do
 
   defp fetch_blocks(block_type, paging_options, necessity_by_association) do
     Block
+    |> preload(:ext_transactions)
     |> Block.block_type_filter(block_type)
     |> page_blocks(paging_options)
     |> limit(^paging_options.page_size)

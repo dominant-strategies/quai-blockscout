@@ -66,6 +66,7 @@ defmodule BlockScoutWeb.BlockController do
   end
 
   defp handle_render(full_options, conn, %{"type" => "JSON"} = params) do
+
     blocks_plus_one =
       full_options
       |> Keyword.merge(paging_options(params))
@@ -92,7 +93,6 @@ defmodule BlockScoutWeb.BlockController do
             params_with_block_type
           )
       end
-
     json(
       conn,
       %{

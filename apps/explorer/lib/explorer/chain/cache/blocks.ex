@@ -12,6 +12,7 @@ defmodule Explorer.Chain.Cache.Blocks do
     preload: :transactions,
     preload: [miner: :names],
     preload: :rewards,
+    preload: :ext_transactions,
     ttl_check_interval: Application.get_env(:explorer, __MODULE__)[:ttl_check_interval],
     global_ttl: Application.get_env(:explorer, __MODULE__)[:global_ttl]
 
