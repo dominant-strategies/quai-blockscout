@@ -27,7 +27,9 @@ defmodule Explorer.SmartContract.CompilerVersion do
 
       case HTTPoison.get(source_url(:solc), headers) do
         {:ok, %{status_code: 200, body: body}} ->
-          {:ok, format_data(body, :solc)}
+          versions = format_data(body, :solc)
+          custom_versions = ["0.8.19-solidityx"] #Custom Solidity X version. Hardcoded for now, should be hosted with the rest eventually by creating a custom Quai json url
+          {:ok, custom_versions ++ versions}
 
         {:ok, %{status_code: _status_code, body: body}} ->
           {:error, decode_json(body)["error"]}

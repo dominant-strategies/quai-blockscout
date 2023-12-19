@@ -25,8 +25,9 @@ defmodule Explorer.SmartContract.Solidity.Publisher do
 
   """
   def publish(address_hash, params, external_libraries \\ %{}) do
+    IO.puts("Publishing smart contract #{address_hash}...")
     params_with_external_libaries = add_external_libraries(params, external_libraries)
-
+    IO.inspect(params_with_external_libaries, label: "params_with_external_libaries")
     case Verifier.evaluate_authenticity(address_hash, params_with_external_libaries) do
       {
         :ok,
@@ -52,7 +53,11 @@ defmodule Explorer.SmartContract.Solidity.Publisher do
           |> Map.put("name", contract_name)
           |> cast_compiler_settings(false)
 
+        IO.inspect(prepared_params, label: "Prepared params")
+
         publish_smart_contract(address_hash, prepared_params, Jason.decode!(abi_string || "null"))
+
+
 
       {:ok, %{abi: abi, constructor_arguments: constructor_arguments}} ->
         params_with_constructor_arguments =

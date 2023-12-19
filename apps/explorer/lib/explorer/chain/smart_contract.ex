@@ -285,6 +285,12 @@ defmodule Explorer.Chain.SmartContract do
   end
 
   def changeset(%__MODULE__{} = smart_contract, attrs) do
+    # Log the current state of the contract
+    IO.inspect(smart_contract, label: "Current Smart Contract")
+
+    # Log the parameters being used to create or update the changeset
+    IO.inspect(attrs, label: "Changeset Params")
+
     smart_contract
     |> cast(attrs, [
       :name,

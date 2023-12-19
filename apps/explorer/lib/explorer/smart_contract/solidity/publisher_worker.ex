@@ -10,6 +10,9 @@ defmodule Explorer.SmartContract.Solidity.PublisherWorker do
   alias Explorer.SmartContract.Solidity.Publisher
 
   def perform({"flattened", %{"address_hash" => address_hash} = params, external_libraries, conn}) do
+    IO.inspect(params, label: " flattened params")
+    IO.inspect(external_libraries, label: " flattened external_libraries")
+
     result =
       case Publisher.publish(address_hash, params, external_libraries) do
         {:ok, _contract} = result ->
@@ -18,7 +21,7 @@ defmodule Explorer.SmartContract.Solidity.PublisherWorker do
         {:error, changeset} ->
           {:error, changeset}
       end
-
+    IO.inspect(result, label: " flattened result")
     EventsPublisher.broadcast([{:contract_verification_result, {address_hash, result, conn}}], :on_demand)
   end
 
