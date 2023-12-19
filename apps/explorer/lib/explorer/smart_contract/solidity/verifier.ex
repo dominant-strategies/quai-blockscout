@@ -275,6 +275,8 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
                 bytecode_hash: option
               )
 
+              IO.inspect(solc_output, label: "solc_output: ")
+
             {:cont,
              compare_bytecodes(
                solc_output,
