@@ -277,13 +277,15 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
 
               IO.inspect(solc_output, label: "solc_output: ")
 
-            {:cont,
-             compare_bytecodes(
-               solc_output,
-               address_hash,
-               constructor_arguments,
-               autodetect_constructor_arguments
-             )}
+              compare_result = compare_bytecodes(
+                solc_output,
+                address_hash,
+                constructor_arguments,
+                autodetect_constructor_arguments
+              )
+              IO.inspect(compare_result, label: "compare_result")
+
+              {:cont, compare_result}
         end
       end)
     else
@@ -358,13 +360,26 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
          arguments_data,
          autodetect_constructor_arguments
        ) do
+
+        IO.inspect(bytecode, label: "Local Compiled Bytecode")
+        IO.inspect(deployed_bytecode, label: "Local Deployed Bytecode")
+        IO.inspect(address_hash, label: "Address Hash")
+        IO.inspect(arguments_data, label: "Arguments Data")
+        IO.inspect(autodetect_constructor_arguments, label: "Autodetect Constructor Arguments")
+
     %{
       "metadata_hash_with_length" => local_meta,
       "trimmed_bytecode" => local_bytecode_without_meta,
       "compiler_version" => solc_local
     } = extract_bytecode_and_metadata_hash(bytecode, deployed_bytecode)
 
+    IO.inspect(local_meta, label: "Local Metadata Hash")
+    IO.inspect(local_bytecode_without_meta, label: "Local Bytecode without Metadata", limit: :infinity)
+    IO.inspect(solc_local, label: "Local Compiler Version")
+
     bc_deployed_bytecode = Chain.smart_contract_bytecode(address_hash)
+
+    IO.inspect(bc_deployed_bytecode, label: "Blockchain Deployed Bytecode")
 
     bc_creation_tx_input =
       case Chain.smart_contract_creation_tx_bytecode(address_hash) do
@@ -376,21 +391,34 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
           ""
       end
 
+    IO.inspect(bc_creation_tx_input, label: "Blockchain Creation Transaction Input")
+
     %{
       "metadata_hash_with_length" => bc_meta,
       "trimmed_bytecode" => bc_creation_tx_input_without_meta,
       "compiler_version" => solc_bc
     } = extract_bytecode_and_metadata_hash(bc_creation_tx_input, bc_deployed_bytecode)
 
+    IO.inspect(bc_meta, label: "Blockchain Metadata Hash")
+    IO.inspect(bc_creation_tx_input_without_meta, label: "Blockchain Bytecode without Metadata", limit: :infinity)
+    write_to_file(bc_creation_tx_input_without_meta, "bc.txt")
+    write_to_file(local_bytecode_without_meta, "local.txt")
+
+    IO.inspect(solc_bc, label: "Blockchain Compiler Version")
+
     bc_replaced_local =
       String.replace(bc_creation_tx_input_without_meta, local_bytecode_without_meta, "", global: false)
 
-    has_constructor_with_params? = has_constructor_with_params?(abi)
+    IO.inspect(bc_replaced_local, label: "Replaced Local Bytecode")
 
+    has_constructor_with_params? = has_constructor_with_params?(abi)
+    IO.inspect(has_constructor_with_params?, label: "Has Constructor with Params")
     is_constructor_args_valid? =
       if has_constructor_with_params?, do: parse_constructor_and_return_check_function(abi), else: fn _ -> false end
 
     empty_constructor_arguments = arguments_data == "" or arguments_data == nil
+    IO.inspect(empty_constructor_arguments, label: "Empty Constructor Arguments")
+
 
     cond do
       bc_creation_tx_input == "" ->
@@ -399,7 +427,7 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
       !String.contains?(bc_creation_tx_input, bc_meta) || bc_deployed_bytecode in ["", "0x"] ->
         {:error, :deployed_bytecode}
 
-      solc_local != solc_bc ->
+      solc_local != solc_bc and solc_local != %CBOR.Tag{tag: :bytes, value: <<0, 8, 19>>}-> #Ignore for solidity X 0.8.19
         {:error, :compiler_version}
 
       !String.contains?(bc_creation_tx_input_without_meta, local_bytecode_without_meta) ->
@@ -430,6 +458,16 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
 
       true ->
         {:error, :unknown_error}
+    end
+  end
+
+  def write_to_file(data, file_name) do
+    case File.write(file_name, data) do
+      :ok ->
+        IO.puts("Successfully wrote to #{file_name}")
+
+      {:error, reason} ->
+        IO.puts("Error writing to file: #{inspect(reason)}")
     end
   end
 

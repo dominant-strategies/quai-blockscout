@@ -98,7 +98,7 @@ defmodule Explorer.SmartContract.Solidity.CodeCompiler do
         System.cmd(
           "node",
           [
-            Application.app_dir(:explorer, "priv/compile_solc_x.js"),
+            Application.app_dir(:explorer, "priv/compile_solc.js"),
             create_source_file(code),
             path,
             optimize_value(optimize),
@@ -111,7 +111,7 @@ defmodule Explorer.SmartContract.Solidity.CodeCompiler do
         )
 
       IO.inspect(response, label: "Compile response :")
-
+      IO.inspect(Jason.decode(response), label: "Decoded response :")
       with {:ok, decoded} <- Jason.decode(response),
            {:ok, contracts} <- get_contracts(decoded),
            %{

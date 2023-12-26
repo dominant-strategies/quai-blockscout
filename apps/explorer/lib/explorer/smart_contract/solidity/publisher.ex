@@ -28,7 +28,10 @@ defmodule Explorer.SmartContract.Solidity.Publisher do
     IO.puts("Publishing smart contract #{address_hash}...")
     params_with_external_libaries = add_external_libraries(params, external_libraries)
     IO.inspect(params_with_external_libaries, label: "params_with_external_libaries")
-    case Verifier.evaluate_authenticity(address_hash, params_with_external_libaries) do
+    authenticity_result = Verifier.evaluate_authenticity(address_hash, params_with_external_libaries)
+    IO.inspect(authenticity_result, label: "Authenticity Result")
+
+    case authenticity_result do
       {
         :ok,
         %{
@@ -46,6 +49,7 @@ defmodule Explorer.SmartContract.Solidity.Publisher do
       } ->
         %{^file_name => contract_source_code} = sources
 
+        IO.puts("Evaluated Authenticity")
         prepared_params =
           result_params
           |> Map.put("contract_source_code", contract_source_code)
@@ -77,6 +81,7 @@ defmodule Explorer.SmartContract.Solidity.Publisher do
       _ ->
         {:error, unverified_smart_contract(address_hash, params_with_external_libaries, "Unexpected error", nil)}
     end
+    IO.puts("End of publish")
   end
 
   def publish_with_standard_json_input(%{"address_hash" => address_hash} = params, json_input) do
