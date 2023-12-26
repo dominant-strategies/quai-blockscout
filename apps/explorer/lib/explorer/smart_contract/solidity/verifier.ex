@@ -241,7 +241,18 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
     optimization_runs = Map.get(params, "optimization_runs", 200)
     autodetect_constructor_arguments = params |> Map.get("autodetect_constructor_args", "false") |> parse_boolean()
 
+        IO.inspect(name, label: "name: ")
+    IO.inspect(contract_source_code, label: "contract_source_code: ")
+    IO.inspect(optimization, label: "optimization: ")
+    IO.inspect(compiler_version, label: "compiler_version: ")
+    IO.inspect(external_libraries, label: "external_libraries: ")
+    IO.inspect(constructor_arguments, label: "constructor_arguments: ")
+    IO.inspect(evm_version, label: "evm_version: ")
+    IO.inspect(optimization_runs, label: "optimization_runs: ")
+    IO.inspect(autodetect_constructor_arguments, label: "autodetect_constructor_arguments: ")
+    IO.inspect(is_compiler_version_at_least_0_6_0?(compiler_version), label: "is_compiler_version_at_least_0_6_0?: ")
     if is_compiler_version_at_least_0_6_0?(compiler_version) do
+      IO.puts("compiler version is at least 0.6.0")
       Enum.reduce_while(@bytecode_hash_options, false, fn option, acc ->
         case acc do
           {:ok, _} = result ->
@@ -264,16 +275,21 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
                 bytecode_hash: option
               )
 
-            {:cont,
-             compare_bytecodes(
-               solc_output,
-               address_hash,
-               constructor_arguments,
-               autodetect_constructor_arguments
-             )}
+              IO.inspect(solc_output, label: "solc_output: ")
+
+              compare_result = compare_bytecodes(
+                solc_output,
+                address_hash,
+                constructor_arguments,
+                autodetect_constructor_arguments
+              )
+              IO.inspect(compare_result, label: "compare_result")
+
+              {:cont, compare_result}
         end
       end)
     else
+      IO.puts("Compiler not > 0.6.0")
       solc_output =
         CodeCompiler.run(
           name: name,
@@ -297,19 +313,25 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
   defp is_compiler_version_at_least_0_6_0?("latest"), do: true
 
   defp is_compiler_version_at_least_0_6_0?(compiler_version) do
-    [version, _] = compiler_version |> String.split("+", parts: 2)
+    # Check if the version is the custom version
+    if compiler_version == "0.8.19-solidityx" do
+      true
+    else
+      [version, _] = compiler_version |> String.split("+", parts: 2)
 
-    digits =
-      version
-      |> String.replace("v", "")
-      |> String.split(".")
-      |> Enum.map(fn str ->
-        {num, _} = Integer.parse(str)
-        num
-      end)
+      digits =
+        version
+        |> String.replace("v", "")
+        |> String.split(".")
+        |> Enum.map(fn str ->
+          {num, _} = Integer.parse(str)
+          num
+        end)
 
-    Enum.fetch!(digits, 0) > 0 || Enum.fetch!(digits, 1) >= 6
+      Enum.fetch!(digits, 0) > 0 || Enum.fetch!(digits, 1) >= 6
+    end
   end
+
 
   defp compare_bytecodes({:error, :name}, _, _, _), do: {:error, :name}
   defp compare_bytecodes({:error, _}, _, _, _), do: {:error, :compilation}
@@ -338,13 +360,26 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
          arguments_data,
          autodetect_constructor_arguments
        ) do
+
+        IO.inspect(bytecode, label: "Local Compiled Bytecode")
+        IO.inspect(deployed_bytecode, label: "Local Deployed Bytecode")
+        IO.inspect(address_hash, label: "Address Hash")
+        IO.inspect(arguments_data, label: "Arguments Data")
+        IO.inspect(autodetect_constructor_arguments, label: "Autodetect Constructor Arguments")
+
     %{
       "metadata_hash_with_length" => local_meta,
       "trimmed_bytecode" => local_bytecode_without_meta,
       "compiler_version" => solc_local
     } = extract_bytecode_and_metadata_hash(bytecode, deployed_bytecode)
 
+    IO.inspect(local_meta, label: "Local Metadata Hash")
+    IO.inspect(local_bytecode_without_meta, label: "Local Bytecode without Metadata", limit: :infinity)
+    IO.inspect(solc_local, label: "Local Compiler Version")
+
     bc_deployed_bytecode = Chain.smart_contract_bytecode(address_hash)
+
+    IO.inspect(bc_deployed_bytecode, label: "Blockchain Deployed Bytecode")
 
     bc_creation_tx_input =
       case Chain.smart_contract_creation_tx_bytecode(address_hash) do
@@ -356,21 +391,34 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
           ""
       end
 
+    IO.inspect(bc_creation_tx_input, label: "Blockchain Creation Transaction Input")
+
     %{
       "metadata_hash_with_length" => bc_meta,
       "trimmed_bytecode" => bc_creation_tx_input_without_meta,
       "compiler_version" => solc_bc
     } = extract_bytecode_and_metadata_hash(bc_creation_tx_input, bc_deployed_bytecode)
 
+    IO.inspect(bc_meta, label: "Blockchain Metadata Hash")
+    IO.inspect(bc_creation_tx_input_without_meta, label: "Blockchain Bytecode without Metadata", limit: :infinity)
+    write_to_file(bc_creation_tx_input_without_meta, "bc.txt")
+    write_to_file(local_bytecode_without_meta, "local.txt")
+
+    IO.inspect(solc_bc, label: "Blockchain Compiler Version")
+
     bc_replaced_local =
       String.replace(bc_creation_tx_input_without_meta, local_bytecode_without_meta, "", global: false)
 
-    has_constructor_with_params? = has_constructor_with_params?(abi)
+    IO.inspect(bc_replaced_local, label: "Replaced Local Bytecode")
 
+    has_constructor_with_params? = has_constructor_with_params?(abi)
+    IO.inspect(has_constructor_with_params?, label: "Has Constructor with Params")
     is_constructor_args_valid? =
       if has_constructor_with_params?, do: parse_constructor_and_return_check_function(abi), else: fn _ -> false end
 
     empty_constructor_arguments = arguments_data == "" or arguments_data == nil
+    IO.inspect(empty_constructor_arguments, label: "Epty Constructor Arguments")
+
 
     cond do
       bc_creation_tx_input == "" ->
@@ -379,7 +427,7 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
       !String.contains?(bc_creation_tx_input, bc_meta) || bc_deployed_bytecode in ["", "0x"] ->
         {:error, :deployed_bytecode}
 
-      solc_local != solc_bc ->
+      solc_local != solc_bc and solc_local != %CBOR.Tag{tag: :bytes, value: <<0, 8, 19>>}-> #Ignore for solidity X 0.8.19
         {:error, :compiler_version}
 
       !String.contains?(bc_creation_tx_input_without_meta, local_bytecode_without_meta) ->
@@ -410,6 +458,16 @@ defmodule Explorer.SmartContract.Solidity.Verifier do
 
       true ->
         {:error, :unknown_error}
+    end
+  end
+
+  def write_to_file(data, file_name) do
+    case File.write(file_name, data) do
+      :ok ->
+        IO.puts("Successfully wrote to #{file_name}")
+
+      {:error, reason} ->
+        IO.puts("Error writing to file: #{inspect(reason)}")
     end
   end
 

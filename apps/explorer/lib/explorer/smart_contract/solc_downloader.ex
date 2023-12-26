@@ -53,15 +53,30 @@ defmodule Explorer.SmartContract.SolcDownloader do
       temp_path = file_path("#{version}-tmp")
 
       contents = download(version)
-
+      IO.inspect(version, label: "Version:")
+      IO.inspect(contents, label: "Contents:")
+      IO.inspect(temp_path, label: "Temp Path:")
       file = File.open!(temp_path, [:write, :exclusive])
 
       IO.binwrite(file, contents)
 
       File.rename(temp_path, path)
+      wasm_contents = download("solidityX-wasm")
+      wasm_temp_path = file_path("soljson-tmp.wasm")
+      IO.inspect(wasm_contents, label: "Wasm Contents:")
+      IO.inspect(wasm_temp_path, label: "Wasm Temp Path:")
+
+      file = File.open!(wasm_temp_path, [:write, :exclusive])
+      IO.binwrite(file, wasm_contents)
+
+      File.rename(wasm_temp_path, file_path_wasm())
     end
 
     {:reply, path, state}
+  end
+
+  defp file_path_wasm() do
+    Path.join(compiler_dir(), "soljson.wasm")
   end
 
   defp fetch?("latest", path) do
@@ -90,10 +105,26 @@ defmodule Explorer.SmartContract.SolcDownloader do
   end
 
   defp download(version) do
-    download_path = "https://solc-bin.ethereum.org/bin/soljson-#{version}.js"
+    IO.puts("Downloading #{version}")
+    download_path =
+      case version do
+        "solidityX-wasm" ->
+          "https://storage.googleapis.com/quai-utility/blockscout/soljson.wasm"
+        "0.8.19-solidityx" ->
+          "https://storage.googleapis.com/quai-utility/blockscout/0.8.19-solidityx.js"
+        _ ->
+          "https://solc-bin.ethereum.org/bin/soljson-#{version}.js"
+      end
+    IO.inspect(download_path, label: "Download Path:")
 
-    download_path
-    |> HTTPoison.get!([], timeout: 60_000, recv_timeout: 60_000)
-    |> Map.get(:body)
+    try do
+      download_path
+      |> HTTPoison.get!([], timeout: 60_000, recv_timeout: 60_000)
+      |> Map.get(:body)
+      |> IO.inspect(label: "Downloaded Body:")
+    rescue
+      e in HTTPoison.Error -> IO.puts("HTTPoison error: #{e.message}")
+      e in Exception -> IO.puts("General error: #{e.message}")
+    end
   end
 end

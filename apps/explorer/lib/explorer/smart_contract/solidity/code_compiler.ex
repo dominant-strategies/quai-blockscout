@@ -92,6 +92,8 @@ defmodule Explorer.SmartContract.Solidity.CodeCompiler do
     path = SolcDownloader.ensure_exists(compiler_version)
 
     if path do
+
+      IO.puts("Using solc at #{path}")
       {response, _status} =
         System.cmd(
           "node",
@@ -108,6 +110,8 @@ defmodule Explorer.SmartContract.Solidity.CodeCompiler do
           ]
         )
 
+      IO.inspect(response, label: "Compile response :")
+      IO.inspect(Jason.decode(response), label: "Decoded response :")
       with {:ok, decoded} <- Jason.decode(response),
            {:ok, contracts} <- get_contracts(decoded),
            %{
