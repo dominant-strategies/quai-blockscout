@@ -2256,7 +2256,7 @@ defmodule Explorer.Chain do
   end
 
 
-  # preload_to_detect_tt?: we don't need to preload more than one token transfer in case the tx inside the list (we dont't show any token transfers on tx tile in new UI)
+  # preload_to_detect_tt?: we don't need to preload more than one token transfer in case the tx inside the list (we don't show any token transfers on tx tile in new UI)
   def preload_token_transfers(
         %Transaction{hash: tx_hash, block_hash: block_hash} = transaction,
         necessity_by_association,
