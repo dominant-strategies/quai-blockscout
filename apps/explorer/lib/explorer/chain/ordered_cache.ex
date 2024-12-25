@@ -246,7 +246,7 @@ defmodule Explorer.Chain.OrderedCache do
 
       defp merge_and_update([], existing, size) do
         # if there are no more candidates to be inserted keep as many of the
-        # exsisting elements and remove the rest
+        # existing elements and remove the rest
         {remaining, to_remove} = Enum.split(existing, size)
         remove(to_remove)
         remaining
